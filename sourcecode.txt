@@ -1,0 +1,61 @@
+# disease_predictor.py
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+import gradio as gr
+
+# Load and preprocess the dataset
+df = pd.read_csv("patient_data.csv")  # Replace with your actual CSV path
+
+# Basic preprocessing
+df.dropna(inplace=True)
+label_encoders = {}
+for col in df.select_dtypes(include='object'):
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col])
+    label_encoders[col] = le
+
+# Define features and target
+X = df.drop('disease', axis=1)
+y = df['disease']
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Model training
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Model evaluation
+y_pred = model.predict(X_test)
+print(f"Model Accuracy: {accuracy_score(y_test, y_pred) * 100:.2f}%")
+
+# Gradio interface function
+def predict_disease(age, bp, sugar, symptom1, symptom2):
+    symptoms = f"{symptom1} {symptom2}"
+    input_data = pd.DataFrame([[age, bp, sugar, symptoms]], 
+                              columns=["age", "bp", "sugar", "symptoms"])
+    for col in input_data.columns:
+        if col in label_encoders:
+            input_data[col] = label_encoders[col].transform(input_data[col])
+    prediction = model.predict(input_data)[0]
+    return label_encoders['disease'].inverse_transform([prediction])[0]
+
+# Launch web interface
+interface = gr.Interface(
+    fn=predict_disease,
+    inputs=[
+        gr.Number(label="Age"),
+        gr.Number(label="Blood Pressure"),
+        gr.Number(label="Blood Sugar"),
+        gr.Textbox(label="Symptom 1"),
+        gr.Textbox(label="Symptom 2")
+    ],
+    outputs=gr.Textbox(label="Predicted Disease"),
+    title="AI Disease Predictor"
+)
+
+interface.launch()
