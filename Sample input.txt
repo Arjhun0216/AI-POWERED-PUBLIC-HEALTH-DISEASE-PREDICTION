@@ -1,0 +1,7 @@
+Input:
+Age: 54
+Blood Pressure: 160
+Blood Sugar: 180
+Symptoms: chest pain, dizziness
+
+Predicted Disease: Heart Disease
